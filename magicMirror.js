@@ -41,13 +41,19 @@ app.displayText = function(text, callback) {
     var callback = callback || function(){};
     var displayText = text || "Oops. I missed it. Try again.";
     var timestamp = new Date().getTime();
-    var update = {"displayText":displayText, timestamp:timestamp};
+    var update = {"displayText":displayText, "timestamp":timestamp};
 
-    app.device.publish(app.TOPIC_TEXT, JSON.stringify(update), function(){
-        console.log("Published: \nTopic => "+app.TOPIC_TEXT
-                    +"Data => "+JSON.stringify(update));
+    console.log("Attemp to display text: " + text);
+    app.device.publish(
+      app.TOPIC_TEXT, 
+      JSON.stringify(update), 
+      function(){
+        console.log(
+          "Published: \nTopic => " + app.TOPIC_TEXT + " \nData => " + JSON.stringify(update)
+        );
         callback();
-    });
+      }
+    );
 }
 
 module.exports = app;

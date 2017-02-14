@@ -19,11 +19,10 @@ app.handler = function (event, context) {
          * Uncomment this if statement and populate with your skill's application ID to
          * prevent someone else from configuring a skill that sends requests to this function.
          */
-        /*
-        if (event.session.application.applicationId !== "amzn1.echo-sdk-ams.app.[unique-value-here]") {
+        //if (event.session.application.applicationId !== "amzn1.echo-api.session.amzn1.ask.skill.1b1aea4b-f9f3-4cc7-a99e-4122f1d24f7d") {
+        if (event.session.application.applicationId !== "amzn1.ask.skill.1b1aea4b-f9f3-4cc7-a99e-4122f1d24f7d") {
              context.fail("Invalid Application ID");
          }
-        */
 
         if (event.session.new) {
             onSessionStarted({requestId: event.request.requestId}, event.session);
@@ -78,6 +77,8 @@ function onIntent(intentRequest, session, callback) {
 
     var intent = intentRequest.intent,
         intentName = intentRequest.intent.name;
+
+    console.log("intentName: " + intentName);
 
     // Dispatch to your skill's intent handlers
     if ("ShowText" === intentName) {
