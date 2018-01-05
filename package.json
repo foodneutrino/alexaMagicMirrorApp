@@ -1,7 +1,7 @@
 {
   "name": "alexaMagicMIrror",
   "version": "1.0.0",
-  "description": "",
+  "description": "Magic Mirror requests from Alexa/Echo",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,8 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "async": "^1.4.2",
-    "aws-iot-device-sdk": "^1.0.6",
-    "google-images": "^0.1.2"
+    "alexa-sdk": "^1.0.11",
+    "aws-iot-device-sdk": "^1.0.14",
+    "google-images": "^2.1.0"
   }
 }

@@ -1,200 +1,81 @@
-var magicMirror = require("./magicMirror");
-var googleImages = require('google-images');
+var MagicMirror = require("./magicMirror");
+const googleImages = require('google-images');
+const Alexa   = require('alexa-sdk');
+const AWS_IOT = require('aws-iot-device-sdk');
+
+const APP_ID = 'amzn1.ask.skill.1b1aea4b-f9f3-4cc7-a99e-4122f1d24f7d';
 /**
  * https://developer.amazon.com/appsandservices/solutions/alexa/alexa-skills-kit/getting-started-guide
  */
 
-var app = {};
-
 // Setup MagicMirror
 // magicMirror.setup();
 
-// Route the incoming request based on type (LaunchRequest, IntentRequest,
-// etc.) The JSON body of the request is provided in the event parameter.
-app.handler = function (event, context) {
-    try {
-        console.log("event.session.application.applicationId=" + event.session.application.applicationId);
+// Define handlers for different alexa requests that come in
+// Register these handlers with the alexa API
+handlers = {
+  'LaunchRequest': function() {
+    console.log("onLaunch requestId=" + this.event.request.requestId
+      + ", sessionId=" + this.event.session.sessionId);
 
-        /**
-         * Uncomment this if statement and populate with your skill's application ID to
-         * prevent someone else from configuring a skill that sends requests to this function.
-         */
-        //if (event.session.application.applicationId !== "amzn1.echo-api.session.amzn1.ask.skill.1b1aea4b-f9f3-4cc7-a99e-4122f1d24f7d") {
-        if (event.session.application.applicationId !== "amzn1.ask.skill.1b1aea4b-f9f3-4cc7-a99e-4122f1d24f7d") {
-             context.fail("Invalid Application ID");
-         }
+    this.emit(':tell', 'Welcome to the Magic Mirror App. Ask me to show you something.')
+  },
 
-        if (event.session.new) {
-            onSessionStarted({requestId: event.request.requestId}, event.session);
-        }
+  'SessionEndedRequest': function() {
+     console.log("onSessionStarted requestId=" + this.event.request.requestId
+       + ", sessionId=" + this.event.session.sessionId);
+  },
 
-        if (event.request.type === "LaunchRequest") {
-            onLaunch(event.request,
-                     event.session,
-                     function callback(sessionAttributes, speechletResponse) {
-                        context.succeed(buildResponse(sessionAttributes, speechletResponse));
-                     });
-        }  else if (event.request.type === "IntentRequest") {
-            onIntent(event.request,
-                     event.session,
-                     function callback(sessionAttributes, speechletResponse) {
-                         context.succeed(buildResponse(sessionAttributes, speechletResponse));
-                     });
-        } else if (event.request.type === "SessionEndedRequest") {
-            onSessionEnded(event.request, event.session);
-            context.succeed();
-        }
-    } catch (e) {
-        context.fail("Exception: " + e);
-    }
-};
+  'ShowText': function() {
+    //var that = this
+    const payload = this.event.request.intent.slots.displayText.value
 
-/**
- * Called when the session starts.
- */
-function onSessionStarted(sessionStartedRequest, session) {
-    console.log("onSessionStarted requestId=" + sessionStartedRequest.requestId
-                + ", sessionId=" + session.sessionId);
-}
+    console.log('Intent: [Text]=[' + payload + ']')
 
-/**
- * Called when the user launches the skill without specifying what they want.
- */
-function onLaunch(launchRequest, session, callback) {
-    console.log("onLaunch requestId=" + launchRequest.requestId
-                + ", sessionId=" + session.sessionId);
+    var magicMirror = new MagicMirror()
+    magicMirror.setup(
+      function() {
+        magicMirror.displayText(payload)
+      }
+    );
 
-    // Dispatch to your skill's launch.
-    getWelcomeResponse(callback);
-}
+    console.log('ShowText Handler Complete. Inform Alexa');
+    this.emit(':tell', 'I told your mirror to say ' + payload)
+  },
 
-/**
- * Called when the user specifies an intent for this skill.
- */
-function onIntent(intentRequest, session, callback) {
-    console.log("onIntent requestId=" + intentRequest.requestId
-                + ", sessionId=" + session.sessionId);
-
-    var intent = intentRequest.intent,
-        intentName = intentRequest.intent.name;
-
-    console.log("intentName: " + intentName);
-
-    // Dispatch to your skill's intent handlers
-    if ("ShowText" === intentName) {
-        showText(intent, session, callback);
-    } else if ("ShowImages" === intentName) {
-        showImages(intent, session, callback);
-    } else {
-        throw "Invalid intent";
-    }
-}
-
-/**
- * Called when the user ends the session.
- * Is not called when the skill returns shouldEndSession=true.
- */
-function onSessionEnded(sessionEndedRequest, session) {
-    console.log("onSessionEnded requestId=" + sessionEndedRequest.requestId
-                + ", sessionId=" + session.sessionId);
-    // Add cleanup logic here
-}
-
-// --------------- Functions that control the skill's behavior -----------------------
-
-function getWelcomeResponse(callback) {
-    // If we wanted to initialize the session to have some attributes we could add those here.
-    var sessionAttributes = {};
-    var cardTitle = "Welcome";
-    var speechOutput = "Welcome to the Magic Mirror App. Ask me to show you something.";
-    // If the user either does not reply to the welcome message or says something that is not
-    // understood, they will be prompted again with this text.
-    var repromptText = "Try something like: Tell mirror to show my sharks.";
-    var shouldEndSession = false;
-
-    callback(sessionAttributes,
-             buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
-}
-
-function showText(intent, session, callback){
-    var cardTitle = "Magic Mirror - Say Something";
-    var displayText = intent.slots.displayText.value;
-    var repromptText = "";
-    var sessionAttributes = {};
-    var shouldEndSession = true;
-    var speechOutput = "";
-
-    speechOutput = "I told your mirror to say "+displayText;
-    repromptText = "I didn't hear you. What would you like me to make your mirror say?";
-
-    magicMirror.setup(function(){
-        // Send publish attempt to AWS IoT
-        magicMirror.displayText(displayText);
-
-        // Done
-        callback(sessionAttributes,
-                 buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
-    });
-}
-
-function showImages(intent, session, callback){
-    var cardTitle = "Magic Mirror - Show Me Something";
-    var searchTerm = intent.slots.searchTerm.value;
-    var repromptText = "";
-    var sessionAttributes = {};
-    var shouldEndSession = true;
-    var speechOutput = "";
-
-    speechOutput = "I told your mirror to show you images of "+searchTerm;
-    repromptText = "I didn't quite hear you right. What would you like your mirror to show you?";
-
+  'ShowImages': function() {
+    var searchTerm = this.event.request.intent.slots.searchTerm.value
+    console.log('Intent: [Image]=[' + searchTerm + ']')
     // Search for images
-    googleImages.search(searchTerm, function(err,images){
+    const client = new googleImages('013522846389950653327:kvc3unan_c0', 'AIzaSyC8YzZ-24BNebSl_qlZ2X52L5mSp5D_f4g');
+    client.search(searchTerm).then(images => {
         console.log("Found images: "+JSON.stringify(images));
 
         // Connect to AWS IoT
-        magicMirror.setup(function(clientToken){
+        var magicMirror = new MagicMirror()
+        magicMirror.setup(function(){
 
             // Send images
             magicMirror.showImages(images,searchTerm);
-
-            // Done
-            callback(sessionAttributes,
-                     buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
         });
     });
 
-}
+    console.log("ShowImages Handler Complete. Inform Alexa")
+    this.emit(':tell', "I told your mirror to show you images of "+searchTerm)
+  }
+};
 
-// --------------- Helpers that build all of the responses -----------------------
+exports.handler = function (event, context, callback) {
+  const alexaId = event.session.application.applicationId
+  const reqId = event.request.requestId
+  console.log(`Event.Session.Application.applicationId: [${event.session.application.applicationId}]`);
+  console.log(`Event.Request.requestId: [${reqId}]`);
+  if (alexaId !== APP_ID) {
+       context.fail("Invalid Application ID");
+  }
 
-function buildSpeechletResponse(title, output, repromptText, shouldEndSession) {
-    return {
-        outputSpeech: {
-            type: "PlainText",
-            text: output
-        },
-        card: {
-            type: "Simple",
-            title: "SessionSpeechlet - " + title,
-            content: "SessionSpeechlet - " + output
-        },
-        reprompt: {
-            outputSpeech: {
-                type: "PlainText",
-                text: repromptText
-            }
-        },
-        shouldEndSession: shouldEndSession
-    }
-}
-
-function buildResponse(sessionAttributes, speechletResponse) {
-    return {
-        version: "1.0",
-        sessionAttributes: sessionAttributes,
-        response: speechletResponse
-    }
-}
-
-module.exports = app;
+  const alexa = Alexa.handler(event, context, callback);
+  alexa.appId = alexaId
+  alexa.registerHandlers(handlers);
+  alexa.execute();
+};
